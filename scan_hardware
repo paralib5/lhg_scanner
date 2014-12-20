@@ -3,9 +3,9 @@
 # This script scans your hardware and sends the collected data
 # to linux-hardware-guide.com
 
-# Version 0.2
+# Version 0.3
 
-#The Linux-Hardware-Guide library server
+# The Linux-Hardware-Guide library server
 $upload_server="http://library.linux-hardware-guide.com";
   
 $TMPDIR = "/tmp/LHG.".$$;
@@ -23,6 +23,10 @@ print "***********\n";
 print "\n";
 print "\n";
 
+my @allfiles = ("alsa_cards.txt","alsa_devices.txt","aplay.txt","cpuinfo.txt",
+                    "dd.err.txt","dd.txt","dmesg.txt","lsb_release.txt","lspci.txt",
+                    "lsusb.txt","lsusb_v.err.txt","lsusb_v.txt","scanimage.txt",
+                    "version.txt","hdparm.txt","hdparm_direct.txt");
 
 # Harddisk check only possible as root. 
 # However, this test (and therefore root privileges) is not mandatory
@@ -32,7 +36,7 @@ print "Collectin data:\n";
 
 system ("mkdir $TMPDIR");
 
-#System information
+# System information
 print " -> general system information \n";
 system ("lsb_release -a > $TMPDIR/lsb_release.txt");
 system ("cat /proc/version > $TMPDIR/version.txt");
@@ -48,11 +52,15 @@ system ("cat /proc/cpuinfo > $TMPDIR/cpuinfo.txt");
 print " -> boot messages \n";
 system ("dmesg > $TMPDIR/dmesg.txt");
 
-#Scanner search
+# system boot messages
+print " -> graphic card/drivers \n";
+check_graphics();
+
+# Scanner search
 print " -> checking scanners \n";
 system ("scanimage -L > $TMPDIR/scanimage.txt");
 
-#Sound system information
+# Sound system information
 print " -> checking sound system \n";
 system ("cat /proc/asound/devices > $TMPDIR/alsa_devices.txt");
 system ("cat /proc/asound/cards  > $TMPDIR/alsa_cards.txt");
@@ -61,6 +69,7 @@ system ("aplay -l > $TMPDIR/aplay.txt");
 
 # HDD measurement
 print " -> checking harddisk\n";
+check_drives();
 system("dd if=/dev/zero of=/tmp/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
 #only possible as root
 if ( $< == 0 ) { 
@@ -71,10 +80,22 @@ if ( $< == 0 ) {
     system ("touch $TMPDIR/hdparm.txt");
     system ("touch $TMPDIR/hdparm_direct.txt");
 }
+
+# Equipment paired with Logitech Unifying Receivers is hard to distinguish
+# We will need some help by other tools here
+print " -> checking Unifying Receivers \n";
+check_unifying_receivers();
+
+print " -> Make data anonymous\n";
+anonymize_data();
+
 print "done\n";
 
-
 print "\nUploading data\n";
+
+#DEBUG MODE
+#exit 0;
+#
 
 upload_files();
 
@@ -109,11 +130,6 @@ sub upload_files {
   my $sid;
   use LWP::UserAgent;  
   use HTTP::Request::Common;
-  
-  my @allfiles = ("alsa_cards.txt","alsa_devices.txt","aplay.txt","cpuinfo.txt",
-                    "dd.err.txt","dd.txt","dmesg.txt","lsb_release.txt","lspci.txt",
-                    "lsusb.txt","lsusb_v.err.txt","lsusb_v.txt","scanimage.txt",
-                    "version.txt","hdparm.txt","hdparm_direct.txt");
   
   #get session ID
   $request = HTTP::Request->new(GET => $upload_server."/uploadrequest.php?v=0.2");
@@ -161,20 +177,16 @@ sub upload_files {
 sub check_root {
     
     if ( $< != 0 ) {
-        print "WARNING:\n";
-        print "========\n";
-        print "This script is running without root priveleges.\n";
-        print "Harddisk performance can only be measured with root priveleges and therefore will be skipped.\n";
-        print "\n";
+        #print "WARNING:\n";
+        #print "========\n";
+        print "(This script is running without root privileges. ";
+        print "Harddisk performance can only be measured with root priveleges and therefore will be skipped.)\n";
+        #print "\n";
         print "\n";
     }
 }
 
 sub create_attachment_string {
-    my @allfiles = ("alsa_cards.txt","alsa_devices.txt","aplay.txt","cpuinfo.txt",
-                    "dd.err.txt","dd.txt","dmesg.txt","lsb_release.txt","lspci.txt",
-                    "lsusb.txt","lsusb_v.err.txt","lsusb_v.txt","scanimage.txt",
-                    "version.txt","hdparm.txt","hdparm_direct.txt");
     
     foreach (@allfiles) {
         if (-e "$TMPDIR/$_") {
@@ -186,4 +198,76 @@ sub create_attachment_string {
     return $attachments;
     
 }
+
+sub anonymize_data {
+    
+    # We do not need IP or MAC addresses, therefore we filter them before uploading the files.
+    # Serial Numbers of Equipment on the other hand might carry important 
+    # information, e.g. if hardware compatibility changes for certain serial numbers
+    # Therefore, serial numbers are currently not filtered
+    
+    foreach (@allfiles) {
+        if (-e "$TMPDIR/$_") {
+            
+            #remove MAC addresses
+            system('sed -i "s/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/00:11:22:33:44:55/g" '.$TMPDIR."/".$_);
+            
+            #remove IP addresses
+            system('sed -i "s/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/192.168.0.0/g" '.$TMPDIR."/".$_);
+
+        }
+    }
+    
+    return $attachments;
+    
+}
+
+sub check_unifying_receivers {
+    #ToDo: This information should be stored in a separate file
+    
+    $path_solaar = `which solaar-cli`;
+    if ($path_solaar eq "") {
+        # tool not installed
+    } else {
+        
+        system( 'echo "\n ------ solaar-cli output ------- \n" >> '.$TMPDIR.'/dmesg.txt');
+        $cmd = substr($path_solaar,0,-1). " show >> $TMPDIR/dmesg.txt 2>> $TMPDIR/dmesg.txt ";
+        system($cmd);
+    
+    }
+}
+
+sub check_graphics {
+    #ToDo: This information should be stored in a separate file
+    
+    $path_xinput = `which xinput`;
+    if ($path_solaar eq "") {
+        # tool not installed
+    } else {
+        system( 'echo "\n ------ xinput ------- \n" >> '.$TMPDIR.'/dmesg.txt');
+        $cmd = substr($path_xinput,0,-1). " >> $TMPDIR/dmesg.txt 2>> $TMPDIR/dmesg.txt ";
+        system($cmd);
+    }
+    
+    system( 'echo "\n ------ Xorg.log ------- \n" >> '.$TMPDIR.'/dmesg.txt');
+    $cmd = "cat /var/log/Xorg.0.log >> $TMPDIR/dmesg.txt 2>> $TMPDIR/dmesg.txt ";
+    system($cmd);
+
+}
+
+sub check_drives {
+    #ToDo: This information should be stored in a separate file
+    
+    if (-e "/sys/block/") {
+        system( 'echo "\n ------ ls -d /sys/block/s* ------- \n" >> '.$TMPDIR.'/dmesg.txt');
+        $cmd0 = "ls -d /sys/block/s* >> $TMPDIR/dmesg.txt 2>> $TMPDIR/dmesg.txt ";
+        system( 'echo "\n ------ /sys/block/s*/device/model ------- \n" >> '.$TMPDIR.'/dmesg.txt');
+        $cmd1 = "cat /sys/block/s*/device/model >> $TMPDIR/dmesg.txt 2>> $TMPDIR/dmesg.txt ";
+        system($cmd0);
+        system($cmd1);
+    }
+    
+}
+
+
 
