@@ -210,7 +210,7 @@ sub anonymize_data {
         if (-e "$TMPDIR/$_") {
             
             #remove MAC addresses
-            system('sed -i "s/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/00:11:22:33:44:55/g" '.$TMPDIR."/".$_);
+            system('sed -i "s/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/00:11:22:33:44:55/g" '.$TMPDIR."/".$_);
             
             #remove IP addresses
             system('sed -i "s/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/192.168.0.0/g" '.$TMPDIR."/".$_);
