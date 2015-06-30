@@ -17,3 +17,6 @@ perl scan_hardware
 http://www.linux-hardware-guide.com/hardware-profile/scan-.....
 
 
+Installation:
+=============
+Ubuntu packages are available at https://launchpad.net/linux-hardware-guide
