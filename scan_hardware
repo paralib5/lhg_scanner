@@ -3,7 +3,9 @@
 # This script scans your hardware and sends the collected data
 # to linux-hardware-guide.com
 
-# Version 0.3
+$VERSION = "0.3.2";
+
+$DEBUG = 1;
 
 # The Linux-Hardware-Guide library server
 $upload_server="http://library.linux-hardware-guide.com";
@@ -86,6 +88,8 @@ if ( $< == 0 ) {
 print " -> checking Unifying Receivers \n";
 check_unifying_receivers();
 
+misc_stats();
+
 print " -> Make data anonymous\n";
 anonymize_data();
 
@@ -97,9 +101,12 @@ print "\nUploading data\n";
 #exit 0;
 #
 
-upload_files();
-
-# Upload request
+if ($DEBUG != 0) {
+    # Upload request
+    upload_files();
+} else {
+    exit 0;
+}    
 
 
 $mailtext ="Please fill out the following mail body:
@@ -270,4 +277,12 @@ sub check_drives {
 }
 
 
+sub misc_stats {
+    
+    # Adding some anonymous stats 
+    
+    system( 'echo "\n ------ STATS ------- \n" >> '.$TMPDIR.'/version.txt');
+    system( 'echo "LHG_VERSION = '.$VERSION.' \n" >> '.$TMPDIR.'/version.txt');
+
+}
 
