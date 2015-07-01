@@ -1,0 +1,201 @@
+#!/usr/bin/perl
+
+# regular check of hardware, if new hardware is found data is uploaded 
+# Linux-Hardware-Guide database
+
+# Currently only checking PCI and USB devices
+
+$sid = $ARGV[0];
+
+# Flag, if new hardware is found
+$found_new_hardware = 0;
+
+check_root();
+check_spool();
+
+
+create_fingerprint_pci();
+create_fingerprint_usb();
+
+print "PCI: \n";
+print "@foundarray_pci";
+
+print "\nUSB: \n";
+print "@foundarray_usb";
+
+make_clean();
+
+exit 0;
+
+
+#
+# create_fingerprint_pci
+#
+#   read pci IDs of hardware
+#
+
+sub create_fingerprint_pci {
+    
+    system ("mkdir -p /tmp/.LHG_".$sid);
+    system ("lspci -nnk > /tmp/.LHG_".$sid."/lspci.txt");
+    
+    open(FILE, "<", "/tmp/.LHG_".$sid."/lspci.txt");
+    open(FILEN, "<", "/tmp/.LHG_".$sid."/lspci.txt");
+    $nextline=<FILEN>;
+    $i=0;
+    #print "PCI Fingerprint: \n";
+    while ( <FILE> ) {
+        $nextline = <FILEN>;
+        #print "Line: $_";
+        
+        $pciid   = grab_pciid($_);
+        if ($pciid != "")  { 
+            #print "PCIID: $pciid \n";
+            $subsystemid   = grab_subsystemid($nextline);
+            #print "Subsystem: $subsystemid \n";
+        }
+        
+
+        
+        if ($pciid != "")  { 
+            #print "$pciid,";
+            
+            @foundarray_pci = (@foundarray_pci, $pciid);
+
+        }
+            
+        #        
+        #
+    }
+    
+    #print "\n";
+    
+}
+
+
+sub grab_subsystemid {
+    my $line = shift;
+    
+    #print "-------\nLine: $line ";
+
+    if ( ($line =~ m/Subsystem/) and ($line =~ m/\w\w\w\w:\w\w\w\w/) )  {
+        my $pciid = substr($line,$-[0],9);
+        #print "PCIID: $pciid \n";
+        return $pciid;
+    } else {
+        #print "   no match \n";
+    }
+    
+}
+
+#
+#
+###  USB subroutines
+#
+#
+
+sub create_fingerprint_usb {
+    
+    system ("lsusb  > /tmp/.LHG_".$sid."/lsusb.txt");
+
+    open(FILE, "<", "/tmp/.LHG_".$sid."/lsusb.txt");
+    $i=0;
+    
+    #print "USB Fingerprint: \n";
+    while ( <FILE> ) {
+        #print "Line: $_ \n";
+        
+        $usbid   = grab_usbid($_);
+        #$usbname = grab_usbname($_);
+        
+        if ($usbid ne "") { 
+            #print "$usbid,";
+            @foundarray_usb = (@foundarray_usb, $usbid);
+        }
+        
+        $i++;
+        #print "\n";
+    }
+}
+
+sub grab_usbid {
+    $line = shift;
+    
+    #print "-------\nLine: $line ";
+
+    if ($line =~ m/\w\w\w\w:\w\w\w\w/) {
+        return substr($line,$-[0],9);
+    } else {
+        #print "   no match \n";
+    }
+    
+}
+
+sub grab_pciid {
+    $line = shift;
+    
+    #print "-------\nLine: $line ";
+
+    if ( ($line =~ m/\w\w\w\w:\w\w\w\w/) and !($line =~ m/Subsystem/) )  {
+        $pciid = substr($line,$-[0],9);
+        #print "PCIID: $pciid \n";
+        return $pciid;
+    } else {
+        #print "   no match \n";
+    }
+    
+}
+
+sub check_root {
+    
+    if ( $< != 0 ) {
+        #print "WARNING:\n";
+        #print "========\n";
+        print "Sorry! This script needs to be running with root privileges. ";
+        print "\n";
+        exit 1;
+    }
+}
+
+sub check_spool {
+    
+    if ( -e "/var/spool/lhg-tools/pcidata" ) {
+        #print "pcidata exists";
+        
+        # read in known data from spool file
+        $pci_array = lhg_readdata("/var/spool/lhg-tools/pcidata");
+    
+    } else {
+        #print "pcidata does not exist";
+        $found_new_hardware = 1;
+        system ("mkdir -p /var/spool/lhg-tools/pcidata");
+    }
+    
+    if ( -e "/var/spool/lhg-tools/usbdata" ) {
+        #print "usbdata exists";
+        $usb_array = lhg_readdata("/var/spool/lhg-tools/pcidata");
+
+    } else {
+        #print "usbdata does not exist";
+        $found_new_hardware = 1;
+        system ("mkdir -p /var/spool/lhg-tools/usbdata");
+        
+        # read in known data from spool file
+
+    }
+}
+
+sub make_clean {
+    
+    # ToDo: cleanup files
+}
+
+sub lhg_readdata {
+    
+    # ToDo: read data from file
+    
+    $filename = shift;
+    $data_array = ();
+    return  $data_array;
+}
+
