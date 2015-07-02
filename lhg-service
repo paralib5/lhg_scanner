@@ -13,16 +13,26 @@ $found_new_hardware = 0;
 check_root();
 check_spool();
 
+# ToDo: check if last upload failed -> $found_new_hardware = 1;
 
 create_fingerprint_pci();
 create_fingerprint_usb();
 
-print "PCI: \n";
-print "@foundarray_pci";
+#print "PCI: \n";
+#print "Known: @known_pci_array \n";
+#print "Scan: @foundarray_pci";
 
-print "\nUSB: \n";
-print "@foundarray_usb";
+#print "\nUSB: \n";
+#print "Known: @known_usb_array \n";
+#print "@foundarray_usb";
 
+check_for_new_ids();
+
+if ($found_new_hardware == 1) {
+    upload_data();
+} else {
+    print "No new hardware found \n";
+}
 make_clean();
 
 exit 0;
@@ -163,22 +173,26 @@ sub check_spool {
         #print "pcidata exists";
         
         # read in known data from spool file
-        $pci_array = lhg_readdata("/var/spool/lhg-tools/pcidata");
+        @known_pci_array = lhg_readdata("/var/spool/lhg-tools/pcidata");
     
     } else {
         #print "pcidata does not exist";
         $found_new_hardware = 1;
-        system ("mkdir -p /var/spool/lhg-tools/pcidata");
+        system ("mkdir -p /var/spool/lhg-tools/");
+        system ("touch /var/spool/lhg-tools/pcidata");
+        system ('echo "# List of PCI data \n" >> /var/spool/lhg-tools/pcidata');
     }
     
     if ( -e "/var/spool/lhg-tools/usbdata" ) {
         #print "usbdata exists";
-        $usb_array = lhg_readdata("/var/spool/lhg-tools/pcidata");
+        @known_usb_array = lhg_readdata("/var/spool/lhg-tools/usbdata");
 
     } else {
         #print "usbdata does not exist";
         $found_new_hardware = 1;
-        system ("mkdir -p /var/spool/lhg-tools/usbdata");
+        system ("mkdir -p /var/spool/lhg-tools/");
+        system ("touch /var/spool/lhg-tools/usbdata");
+        system ('echo "# List of USB data \n" >> /var/spool/lhg-tools/usbdata');
         
         # read in known data from spool file
 
@@ -192,10 +206,80 @@ sub make_clean {
 
 sub lhg_readdata {
     
+    $FILE = shift;
+    @data_array = ();
+    open(FILE, $FILE);
+    while (<FILE>) {
+        
+        if (substr($_,0,1) eq "#") {
+            # skip comment lines
+        
+        } else {
+            $id = $_;
+            $id =~ s/(\r)|(\n)//g;
+            @data_array = (@data_array, $id);
+        }
+    }
     # ToDo: read data from file
     
-    $filename = shift;
-    $data_array = ();
-    return  $data_array;
+    return  @data_array;
+}
+
+sub check_for_new_ids {
+    
+    #print "\n";
+    
+    # compare PCI IDs
+    foreach (@foundarray_pci)
+    {
+        $searchfor = $_ ;
+        #print "checking $searchfor ...";
+        #if ($_ ~~ @known_pci_array) {
+        if ( grep( /^${searchfor}/, @known_pci_array ) ) {
+            #print "found \n";
+        }else {
+            #print "not found \n";
+            $found_new_hardware = 1;
+            # add to file
+            system ('echo "'.$searchfor.'" >> /var/spool/lhg-tools/pcidata');
+
+        }
+    }
+    
+    # compare USB IDs
+    foreach (@foundarray_usb)
+    {
+        $searchfor = $_ ;
+        #print "checking $searchfor ...";
+        #if ($_ ~~ @known_usb_array) {
+        if ( grep( /^${searchfor}/, @known_usb_array ) ) {
+            #print "found \n";
+        }else {
+            #print "not found \n";
+            $found_new_hardware = 1;
+            # add to file
+            system ('echo "'.$searchfor.'" >> /var/spool/lhg-tools/usbdata');
+
+        }
+    }
+
+}
+
+sub upload_data {
+    
+    print "found new HW -> starting upload \n";
+    
+    if ( -e "./scan_hardware") {
+        
+        print "executing HW scan \n";
+        system ("./scan_hardware");
+        
+    }elsif ( -e "/usr/bin/scan_hardware") {
+        
+        print "executing HW scan \n";
+        system ("/usr/bin/scan_hardware");
+        
+    }
+    
 }
 
