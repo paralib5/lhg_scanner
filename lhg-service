@@ -267,19 +267,53 @@ sub check_for_new_ids {
 
 sub upload_data {
     
+    my $exit_val;
+    my $pid;
+    
     print "found new HW -> starting upload \n";
     
     if ( -e "./scan_hardware") {
         
         print "executing HW scan \n";
-        system ("./scan_hardware");
+        
+        $pid = fork;
+        die "Fork failed: $!" unless defined $pid;
+        unless ($pid) {
+            #exec "./long.pl";  # Some long running process.
+            exec ("./scan_hardware");
+        }
+        
         
     }elsif ( -e "/usr/bin/scan_hardware") {
         
         print "executing HW scan \n";
-        system ("/usr/bin/scan_hardware");
         
+        $pid = fork;
+        die "Fork failed: $!" unless defined $pid;
+        unless ($pid) {
+            #exec "./long.pl";  # Some long running process.
+            #exec ("./scan_hardware");
+            exec ("/usr/bin/scan_hardware");
+        }
     }
     
+    #wait for children to finish
+    waitpid $pid, 0;
+    #print "PID was: $pid \n";
+    $exit_val = $? >> 8;  
+    #print "Exit Val: $exit_val \n";
+    
+    if ($exit_val > 0) {
+        # upload did not work. store for later
+        my @chars = (0 .. 9, "A".."Z", "a".."z");
+        my $rndstring;
+        $rndstring .= $chars[rand @chars] for 1..8;
+        system ("mkdir -p /var/spool/lhg-tools/missed_uploads.$rndstring");
+        system ("cp /tmp/LHG.$pid/* /var/spool/lhg-tools/missed_uploads.$rndstring/");
+        #system ("echo $
+        
+    } else {
+        # ToDo: upload done, also upload missed files
+    }
 }
 
