@@ -1,9 +1,21 @@
 ToDo:
 =====
 
-#0002 
-recognize if scan_hardware upload failed. lhg-service to retry upload next start
-
 #0003
 lhg-service should store IDs only, if unique (e.g. ignoring USB Hubs with repeating IDs)
+
+#0004
+Search for cached scan data, if upload failed. Upload at later time, if connection is up again.
+
+#0005
+use /etc configuration file for anonymous ID and possibility of linking to www.linux-hardware-guide.com user account
+
+#0006
+Store scan date (needed if upload failed)
+
+Fixed:
+======
+
+#0002  2015-07-04
+recognize if scan_hardware upload failed. 
 
