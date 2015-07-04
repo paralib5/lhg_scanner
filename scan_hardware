@@ -173,7 +173,17 @@ sub upload_files {
                );
   
   print " -> "; 
+  print "(".$response->code.") :";
   print $response->content;
+  
+  if ($response->code == HTTP::Status::HTTP_REQUEST_TIMEOUT) {
+      print "Connection timeout. Upload failed \n";
+      exit 3;
+    }
+  if ($response->code == 500 ) {
+      print "Bad Hostname, upload failed. Please check your internet connection. \n";
+      exit 4;
+    }
   
   print "\n\nSee your scan results at:\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
 
