@@ -31,6 +31,12 @@ store all upload IDs to allow users to see their history of uploads
 #0012
 MAC address anonymizer fails
 
+#0013
+Let (anonymous) user check, if uploads were included or help is needed - set corresponding flag for upload ID on server
+
+#0014
+Post-install configuration of user data (ask: anonymous or mail address?)
+
 Fixed:
 ======
 
