@@ -25,6 +25,12 @@ notifyer message if new hardware is found
 #0010
 graphical frontend if started under X (configure user account, link to help pages, show old scan results, initiate scan, ...)
 
+#0011
+store all upload IDs to allow users to see their history of uploads
+
+#0012
+MAC address anonymizer fails
+
 Fixed:
 ======
 
