@@ -13,6 +13,18 @@ use /etc configuration file for anonymous ID and possibility of linking to www.l
 #0006
 Store scan date (needed if upload failed)
 
+#0007
+system message if upload was successful. provide output url
+
+#0008
+install icon in toolbar
+
+#0009
+notifyer message if new hardware is found
+
+#0010
+graphical frontend if started under X (configure user account, link to help pages, show old scan results, initiate scan, ...)
+
 Fixed:
 ======
 
