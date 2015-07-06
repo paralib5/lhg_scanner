@@ -6,6 +6,11 @@
 # Currently only checking PCI and USB devices
 
 $sid = $ARGV[0];
+$upload_server="http://library.linux-hardware-guide.com";
+
+
+# Check for cached uploads - if found upload now
+check_missed_uploads();
 
 # Flag, if new hardware is found
 $found_new_hardware = 0;
@@ -316,4 +321,91 @@ sub upload_data {
         # ToDo: upload done, also upload missed files
     }
 }
+
+sub check_missed_uploads {
+    
+     @files = glob("/var/spool/lhg-tools/missed_uploads.*");
+
+     foreach (@files) {
+         # do something
+         
+         #print "uploading $_ ";
+         
+         upload_cached_files($_);
+
+     }
+     
+     exit 0;
+}
+
+sub upload_cached_files {
+    
+    my $TMPDIR =  shift;
+    my $fname = $TMPDIR;;
+    $fname =~ s/\/var\/spool\/lhg-tools\///; 
+
+  my @allfiles = ("alsa_cards.txt","alsa_devices.txt","aplay.txt","cpuinfo.txt",
+                    "dd.err.txt","dd.txt","dmesg.txt","lsb_release.txt","lspci.txt",
+                    "lsusb.txt","lsusb_v.err.txt","lsusb_v.txt","scanimage.txt",
+                         "version.txt","hdparm.txt","hdparm_direct.txt");
+
+  
+  my $sid;
+  use LWP::UserAgent;  
+  use HTTP::Request::Common;
+  
+  #get session ID
+  $request = HTTP::Request->new(GET => $upload_server."/uploadrequest.php?v=0.2");
+  $ua = LWP::UserAgent->new;
+  $response = $ua->request($request);
+  $sid = $response->content;
+  
+  #$ua = LWP::UserAgent->new;
+  #upload files
+  $response = $ua->request(POST $upload_server."/uploadfiles.php", 
+
+               Content_Type => 'form-data',
+               
+               Content      => [ sid     => $sid,
+                                file1    => ["$TMPDIR/".$allfiles[0]],
+                                file2    => ["$TMPDIR/".$allfiles[1]],
+                                file3    => ["$TMPDIR/".$allfiles[2]],
+                                file4    => ["$TMPDIR/".$allfiles[3]],
+                                file5    => ["$TMPDIR/".$allfiles[4]],
+                                file6    => ["$TMPDIR/".$allfiles[5]],
+                                file7    => ["$TMPDIR/".$allfiles[6]],
+                                file8    => ["$TMPDIR/".$allfiles[7]],
+                                file9    => ["$TMPDIR/".$allfiles[8]],
+                                file10   => ["$TMPDIR/".$allfiles[9]],
+                                file11   => ["$TMPDIR/".$allfiles[10]],
+                                file12   => ["$TMPDIR/".$allfiles[11]],
+                                file13   => ["$TMPDIR/".$allfiles[12]],
+                                file14   => ["$TMPDIR/".$allfiles[13]],
+                                file15   => ["$TMPDIR/".$allfiles[14]],
+                                file16   => ["$TMPDIR/".$allfiles[15]],
+                               ]
+               
+               );
+  
+  print " -> "; 
+  print "(".$response->code.") :";
+  print $response->content;
+  print "\n";
+  
+  
+  #print  "DEBUG: mv /var/spool/lhg-tools/$fname /var/spool/lhg-tools/done_$fname"; 
+
+  if ($response->code == HTTP::Status::HTTP_REQUEST_TIMEOUT) {
+      print "Connection timeout. Upload failed \n";
+  }elsif ($response->code == 500 ) {
+      print "Bad Hostname, upload failed. Please check your internet connection. \n";
+  }else{
+      #print "upload successful";
+      #print  "mv /var/spool/lhg-tools/$fname /var/spool/lhg-tools/done_$fname"; 
+      system "mv /var/spool/lhg-tools/$fname /var/spool/lhg-tools/done_$fname"; 
+  }
+  #exit 0;
+  
+}
+
 
