@@ -335,7 +335,6 @@ sub check_missed_uploads {
 
      }
      
-     exit 0;
 }
 
 sub upload_cached_files {
