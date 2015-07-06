@@ -4,12 +4,6 @@ ToDo:
 #0003
 lhg-service should store IDs only, if unique (e.g. ignoring USB Hubs with repeating IDs)
 
-#0004
-Search for cached scan data, if upload failed. Upload at later time, if connection is up again.
-
-#0005
-use /etc configuration file for anonymous ID and possibility of linking to www.linux-hardware-guide.com user account
-
 #0006
 Store scan date (needed if upload failed)
 
@@ -37,9 +31,18 @@ Let (anonymous) user check, if uploads were included or help is needed - set cor
 #0014
 Post-install configuration of user data (ask: anonymous or mail address?)
 
+#0015 
+add upload IDs to STAT section of version.txt
+
+
 Fixed:
 ======
 
 #0002  2015-07-04
 recognize if scan_hardware upload failed. 
 
+#0004 2015-07-07
+Search for cached scan data, if upload failed. Upload at later time, if connection is up again.
+
+#0005 2015-07-07
+use /etc configuration file for anonymous ID and possibility of linking to www.linux-hardware-guide.com user account
