@@ -3,7 +3,7 @@
 # This script scans your hardware and sends the collected data
 # to linux-hardware-guide.com
 
-$VERSION = "0.3.2";
+$VERSION = "0.3.3";
 
 $DEBUG = 0;
 
@@ -11,6 +11,8 @@ $DEBUG = 0;
 $upload_server="http://library.linux-hardware-guide.com";
   
 $TMPDIR = "/tmp/LHG.".$$;
+
+check_configuration_file();
 
 print "***********\n";
 print "* This is the hardware scan program of \n";
@@ -294,5 +296,90 @@ sub misc_stats {
     
     system( 'echo "\n ------ STATS ------- \n" >> '.$TMPDIR.'/version.txt');
     system( 'echo "LHG_VERSION = '.$VERSION.' \n" >> '.$TMPDIR.'/version.txt');
+    system( 'echo "UID = '.$uid.' \n" >> '.$TMPDIR.'/version.txt');
+    system( 'echo "USER_MAIL = '.$umail.' \n" >> '.$TMPDIR.'/version.txt');
+    system( 'echo "\n ------ PCIDATA ------ \n" >> '.$TMPDIR.'/version.txt');
+    
+    if (-e "/var/spool/lhg-tools/pcidata") {
+        system( 'cat /var/spool/lhg-tools/pcidata >> '.$TMPDIR.'/version.txt');
+    }
+    system( 'echo "\n ------ USBDATA ------ \n" >> '.$TMPDIR.'/version.txt');
+    if (-e "/var/spool/lhg-tools/usbdata") {
+        system( 'cat /var/spool/lhg-tools/usbdata >> '.$TMPDIR.'/version.txt');
+    }
 
+}
+
+sub check_configuration_file {
+    
+    $filename = '/etc/lhg-tools.conf';
+    
+    if (-e $filename) {
+        # file exists, read configuration
+        $uid = get_conf_value("ANONYMOUS_USER_ID");
+        $umail = get_conf_value("USER_EMAIL");
+        
+    }else {
+        #print "not existing: ( $< ) ";
+        #create if root
+        if ( $< == 0 ) {
+            
+            my @chars = (0 .. 9, "A".."Z", "a".."z");
+            my $rndstring;
+            $rndstring .= $chars[rand @chars] for 1..16;
+
+            $UID = $rndstring;
+            
+            my $file = "/etc/lhg-tools.conf";
+            open(FILE, '>'.$file); 
+            
+            print FILE "# This is the configuration file of the Linux-Hardware-Guide tools\n";
+            print FILE "# \n";
+            print FILE "
+# Every user gets an anonymous user id assigned to allow checking 
+# his own upload results
+# ID is set by ANONYMOUS_USER_ID
+                
+ANONYMOUS_USER_ID = $UID
+                
+# Your account can be linked with your email address. This way we can 
+# contact you, if we have questions regarding your uploaded hardware
+# data.
+                
+USER_EMAIL = unknown\@null.com
+                
+";
+
+# close the file.
+close FILE;
+            
+            
+        }
+    }
+    
+}
+
+sub get_conf_value {
+    
+    my $confstrg = shift;
+    my $confstrgl = length($confstrg);
+    my $confvalue;
+    
+    open FILE, "/etc/lhg-tools.conf";
+  
+    while (<FILE>) {
+        #print "S: $_ ";  
+      if ( substr($_,0,$confstrgl) eq $confstrg) {
+          #print $_;
+          $confvalue = $_;
+          $confvalue =~ s/$confstrg//;
+          $confvalue =~ s/=//;
+          $confvalue =~ s/ //g;
+          $confvalue =~ s/(\r)|(\n)//g;
+      }
+    }
+    close FILE;
+    
+    #print "Val: $confvalue";
+    return $confvalue;
 }
