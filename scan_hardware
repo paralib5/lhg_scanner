@@ -3,7 +3,7 @@
 # This script scans your hardware and sends the collected data
 # to linux-hardware-guide.com
 
-$VERSION = "0.3.3";
+$VERSION = "0.3.4";
 
 $DEBUG = 0;
 
@@ -19,7 +19,7 @@ print "* This is the hardware scan program of \n";
 print "* http://www.Linux-Hardware-Guide.com\n";
 print "* \n";
 print "* It will check your hardware and send the results to \n";
-print "* webmaster\@linux-hardware-guide.com\n";
+print "* the Linux-Hardware-Guide\n";
 print "* \n";
 print "* Log outputs will be stored in: ";
 print "$TMPDIR \n";
@@ -89,6 +89,7 @@ if ( $< == 0 ) {
 # We will need some help by other tools here
 print " -> checking Unifying Receivers \n";
 check_unifying_receivers();
+read_dmi();
 
 misc_stats();
 
@@ -382,4 +383,13 @@ sub get_conf_value {
     
     #print "Val: $confvalue";
     return $confvalue;
+}
+
+sub read_dmi {
+    
+    system( 'echo "\n ------ DMI DATA ------ \n" >> '.$TMPDIR.'/dmesg.txt');
+    
+    if ( $< == 0 ) { 
+        system ("dmidecode >> $TMPDIR/dmesg.txt");
+    }
 }
