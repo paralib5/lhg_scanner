@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+check_config_file();
+
+exit 0;
+
+sub check_config_file {
+
+    $filename = '/etc/lhg-tools.conf';
+    
+    if (-e $filename) {
+        # file exists, read configuration
+        $uid = get_conf_value("ANONYMOUS_USER_ID");
+        $umail = get_conf_value("USER_EMAIL");
+        
+    }else {
+        
+        print "No HW Scan executed so far. \n";
+        print "This normally should happen during installation. \n";
+        print "Please execute: sudo /usr/bin/lhg-service \n";
+        exit 2;
+    }
+    
+    # load web page
+    if (-e "/usr/bin/sensible-browser") {
+        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    }elsif (-e "/usr/bin/xdg-open") {
+        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    }elsif (-e "/usr/bin/firefox") {
+             system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    }elsif (-e "/usr/bin/chromium-browser") {
+             system "chromium-browser --app=http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    }
+}
+
+sub get_conf_value {
+    
+    my $confstrg = shift;
+    my $confstrgl = length($confstrg);
+    my $confvalue;
+    
+    open FILE, "/etc/lhg-tools.conf";
+  
+    while (<FILE>) {
+        #print "S: $_ ";  
+      if ( substr($_,0,$confstrgl) eq $confstrg) {
+          #print $_;
+          $confvalue = $_;
+          $confvalue =~ s/$confstrg//;
+          $confvalue =~ s/=//;
+          $confvalue =~ s/ //g;
+          $confvalue =~ s/(\r)|(\n)//g;
+      }
+    }
+    close FILE;
+    
+    #print "Val: $confvalue";
+    return $confvalue;
+}
