@@ -15,6 +15,9 @@ check_missed_uploads();
 # Flag, if new hardware is found
 $found_new_hardware = 0;
 
+# check for first run
+check_first_run();
+
 check_root();
 check_spool();
 
@@ -319,6 +322,22 @@ sub upload_data {
         
     } else {
         # ToDo: upload done, also upload missed files
+    }
+}
+
+sub check_first_run {
+    
+    $conf_filename = '/etc/lhg-tools.conf';
+    $pci_filename = '/var/spool/lhg-tools/pcidata';
+    
+    if ( (-e $conf_filename) && (-e $pci_filename) ){
+        # files exists, program was run before
+        
+    }else {
+        
+        #enforcing hardware scan
+        $found_new_hardware = 1;
+
     }
 }
 
