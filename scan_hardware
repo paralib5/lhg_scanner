@@ -43,6 +43,7 @@ system ("mkdir $TMPDIR");
 # System information
 print " -> general system information \n";
 system ("lsb_release -a > $TMPDIR/lsb_release.txt");
+system ("cat /etc/*-release >> $TMPDIR/lsb_release.txt");
 system ("cat /proc/version > $TMPDIR/version.txt");
 
 # General HW overview
