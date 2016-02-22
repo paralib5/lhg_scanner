@@ -3,7 +3,7 @@
 # This script scans your hardware and sends the collected data
 # to linux-hardware-guide.com
 
-$VERSION = "0.3.4";
+$VERSION = "0.3.5";
 
 $DEBUG = 0;
 
@@ -106,7 +106,7 @@ print "\nUploading data\n";
 #
 
 if ($DEBUG == 0) {
-    # Upload request
+    # Upload request and open browser
     upload_files();
     exit 0;
 } else {
@@ -190,11 +190,30 @@ sub upload_files {
     }
   
   print "\n\nSee your scan results at:\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
-
+  
+  open_browser($sid);
+  
   exit 0;
   
 }
 
+sub open_browser {
+    my $sid = shift;
+    
+    print "Trying to open scan results in browser...\n";
+    
+    if (-e "/usr/bin/sensible-browser") {
+        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+    }elsif (-e "/usr/bin/xdg-open") {
+        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+    }elsif (-e "/usr/bin/firefox") {
+             system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+    }elsif (-e "/usr/bin/chromium-browser") {
+             system "chromium-browser --app=http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+    }
+
+    
+}
   
 sub check_root {
     
