@@ -2,8 +2,17 @@
 
 # This script scans your hardware and sends the collected data
 # to linux-hardware-guide.com
+# It uses standard tools like lsusb, lscpi, lsb_release to gather data, 
+# sends it to our database, and then creates a link to the result page.
+#
+# It is intended as a simple method to add your hardware components to 
+# the Linux-Hardware-Guide database.
+#
+# Latest version of the script can be found at:
+# https://github.com/paralib5/lhg_scanner
 
-$VERSION = "0.3.5";
+
+$VERSION = "0.3.7";
 
 $DEBUG = 0;
 
@@ -36,7 +45,7 @@ my @allfiles = ("alsa_cards.txt","alsa_devices.txt","aplay.txt","cpuinfo.txt",
 # However, this test (and therefore root privileges) is not mandatory
 check_root();
 
-print "Collectin data:\n";
+print "Collecting data:\n";
 
 system ("mkdir $TMPDIR");
 
@@ -191,8 +200,12 @@ sub upload_files {
   
   print "\n\nSee your scan results at:\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
   
-  open_browser($sid);
   
+  if ($ARGV[0] eq "--silent") {
+      #service mode -> do nothing
+  }else{
+      open_browser($sid);
+  }
   exit 0;
   
 }
@@ -242,7 +255,7 @@ sub create_attachment_string {
 
 sub anonymize_data {
     
-    # We do not need IP or MAC addresses, therefore we filter them before uploading the files.
+    # We do not need your IP or MAC addresses, therefore we filter them before uploading the files.
     # Serial Numbers of Equipment on the other hand might carry important 
     # information, e.g. if hardware compatibility changes for certain serial numbers
     # Therefore, serial numbers are currently not filtered
@@ -250,12 +263,24 @@ sub anonymize_data {
     foreach (@allfiles) {
         if (-e "$TMPDIR/$_") {
             
-            #remove MAC addresses
-            system('sed -i "s/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/00:11:22:33:44:55/g" '.$TMPDIR."/".$_);
-            
-            #remove IP addresses
-            system('sed -i "s/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/192.168.0.0/g" '.$TMPDIR."/".$_);
+            open FILE, "+<", "$TMPDIR/$_";
+            while ($line = <FILE>) {
+                
+                # Replace MAC adresses
+                if ($line =~ m/(([0-9A-Fa-f]{2}:){5})[0-9A-Fa-f]{2}/) {
+                    $line =~ s/(([0-9A-Fa-f]{2}:){5})[0-9A-Fa-f]{2}/00:11:22:33:44:55/g;
+                    print FILE $line;
+                }
+                
+                # Replace IP adresses, conservative filter used
+                if ($line =~ m/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) {
+                    $line =~ s/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/192.168.0.0/g;
+                    print FILE $line;
+                }
 
+                
+            }
+            close FILE;
         }
     }
     
