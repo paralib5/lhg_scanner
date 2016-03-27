@@ -59,7 +59,15 @@ system ("cat /proc/version > $TMPDIR/version.txt");
 print " -> general hardware overview \n";
 system ("lsusb > $TMPDIR/lsusb.txt");
 system ("lsusb -v > $TMPDIR/lsusb_v.txt 2> $TMPDIR/lsusb_v.err.txt");
-system ("lspci -nnk > $TMPDIR/lspci.txt");
+
+# lspci needed to be started with absolute path for some distribution (e.g. OpenSUSE)
+if (-e "/usr/bin/lspci") {
+    system ("/usr/bin/lspci -nnk > $TMPDIR/lspci.txt");
+}elsif (-e "/sbin/lspci") {
+    system ("/sbin/lspci -nnk > $TMPDIR/lspci.txt");
+}else{
+    system ("lspci -nnk > $TMPDIR/lspci.txt");
+}
 system ("cat /proc/cpuinfo > $TMPDIR/cpuinfo.txt");
 
 # system boot messages
