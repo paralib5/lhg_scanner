@@ -12,7 +12,7 @@
 # https://github.com/paralib5/lhg_scanner
 
 
-$VERSION = "0.3.7";
+$VERSION = "0.3.8";
 
 $DEBUG = 0;
 
@@ -271,28 +271,36 @@ sub anonymize_data {
     foreach (@allfiles) {
         if (-e "$TMPDIR/$_") {
             
-            open FILE, "+<", "$TMPDIR/$_";
+            open FILE_OUT, ">", "$TMPDIR/$_.clean";
+            open FILE, "<", "$TMPDIR/$_";
             while ($line = <FILE>) {
                 
                 # Replace MAC adresses
                 if ($line =~ m/(([0-9A-Fa-f]{2}:){5})[0-9A-Fa-f]{2}/) {
                     $line =~ s/(([0-9A-Fa-f]{2}:){5})[0-9A-Fa-f]{2}/00:11:22:33:44:55/g;
-                    print FILE $line;
                 }
                 
                 # Replace IP adresses, conservative filter used
                 if ($line =~ m/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) {
                     $line =~ s/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/192.168.0.0/g;
-                    print FILE $line;
                 }
+                
+                print FILE_OUT $line;
 
                 
             }
             close FILE;
+            close FILE_OUT;
+            
+            #overwrite log files with anonymized one
+            $old = "$TMPDIR/$_.clean";
+            $new = "$TMPDIR/$_";
+            rename ( $old, $new );
+            
         }
     }
     
-    return $attachments;
+    return;
     
 }
 
