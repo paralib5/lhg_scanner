@@ -12,7 +12,7 @@
 # https://github.com/paralib5/lhg_scanner
 
 
-$VERSION = "0.3.9";
+$VERSION = "0.3.10";
 
 $DEBUG = 0;
 
@@ -361,6 +361,7 @@ sub misc_stats {
     system( 'echo "LHG_VERSION = '.$VERSION.' \n" >> '.$TMPDIR.'/version.txt');
     system( 'echo "UID = '.$uid.' \n" >> '.$TMPDIR.'/version.txt');
     system( 'echo "LHGUID = '.$USERID.' \n" >> '.$TMPDIR.'/version.txt');
+    system( 'echo "LHGUIDDE = '.$USERIDDE.' \n" >> '.$TMPDIR.'/version.txt');
     system( 'echo "COMMENTID = '.$COMMENTID.' \n" >> '.$TMPDIR.'/version.txt');
     system( 'echo "USER_MAIL = '.$umail.' \n" >> '.$TMPDIR.'/version.txt');
     system( 'echo "\n ------ PCIDATA ------ \n" >> '.$TMPDIR.'/version.txt');
@@ -469,6 +470,11 @@ sub interpret_commandline_options {
             $USERID = substr($ARGV[$argnum],2);
         }
         
+        # LHG.de userid was provided
+        if (substr($ARGV[$argnum],0,2) eq "-d" ) {
+            $USERIDDE = substr($ARGV[$argnum],2);
+        }
+
         # Link with comment
         if (substr($ARGV[$argnum],0,2) eq "-c" ) {
             $COMMENTID = substr($ARGV[$argnum],2);
