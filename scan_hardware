@@ -12,7 +12,7 @@
 # https://github.com/paralib5/lhg_scanner
 
 
-$VERSION = "0.3.10";
+$VERSION = "0.3.11";
 
 $DEBUG = 0;
 
@@ -207,14 +207,30 @@ sub upload_files {
       exit 4;
     }
   
-  print "\n\nSee your scan results at:\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
+  print "\n\nOpening scan results at:\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
   
+  # store help in file
+            
+  open FILE_OUT, ">", "$TMPDIR/readme.txt";
+  print FILE_OUT "This directory contains the log messages sent to the Linux-Hardware-Guide.\n";
+  print FILE_OUT "http://www.Linux-Hardware-Guide.com\n";
+  print FILE_OUT "\n";
+  print FILE_OUT "You can find your processed scan results at \n";
+  print FILE_OUT "http://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
+  close FILE_OUT;
   
   if ($ARGV[0] eq "--silent") {
       #service mode -> do nothing
   }else{
       open_browser($sid);
   }
+  
+  
+  print "\n\n\n****************************** ";
+  print "\nYour scan results can be found at";
+  print "\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."";
+  print "\n****************************** \n\n";
+
   exit 0;
   
 }
@@ -225,13 +241,13 @@ sub open_browser {
     print "Trying to open scan results in browser...\n";
     
     if (-e "/usr/bin/sensible-browser") {
-        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt ";
     }elsif (-e "/usr/bin/xdg-open") {
-        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
     }elsif (-e "/usr/bin/firefox") {
-             system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+        system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
     }elsif (-e "/usr/bin/chromium-browser") {
-             system "chromium-browser --app=http://www.linux-hardware-guide.com/hardware-profile/scan-$sid";
+        system "chromium-browser --app=http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
     }
 
     
@@ -286,6 +302,11 @@ sub anonymize_data {
                     $line =~ s/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/192.168.0.0/g;
                 }
                 
+                #appamor output can contain sensitive information (e.g. home directory file names)
+                if ($line =~ m/apparmor=/) {
+                    $line = "FILTERED LINE (apparmor)";
+                }
+
                 print FILE_OUT $line;
 
                 
