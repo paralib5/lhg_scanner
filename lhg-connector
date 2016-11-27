@@ -25,7 +25,7 @@ sub check_config_file {
     if (-e "/usr/bin/sensible-browser") {
         system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     }elsif (-e "/usr/bin/xdg-open") {
-        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+        system "xdg-open http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     }elsif (-e "/usr/bin/firefox") {
              system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     }elsif (-e "/usr/bin/chromium-browser") {
