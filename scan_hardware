@@ -12,7 +12,7 @@
 # https://github.com/paralib5/lhg_scanner
 
 
-$VERSION = "0.3.11";
+$VERSION = "0.4.0";
 
 $DEBUG = 0;
 
@@ -154,16 +154,41 @@ system ("thunderbird -compose \"to='webmaster\@linux-hardware-guide.com',subject
 
 exit 0;
 
+sub check_proxy {
+
+    use IO::Prompter;
+    use URI::Split qw(uri_split uri_join);
+
+    my $ua = LWP::UserAgent->new;
+
+    if ($ENV{http_proxy} eq "") {
+        print "No http proxy defined.";
+        return $ua;
+    }
+
+    $ua->env_proxy;
+    my $response = $ua->get($upload_server);
+    if ($response->code == 407) {
+        print "Proxy requires username and password\n";
+        my $username = prompt "Username: ";
+        my $password = prompt "Password: ", -echo=>'*';
+        my (@parts) = uri_split($ENV{http_proxy});
+        $proxyurl = uri_join(@parts[0], $username . ":" . $password . "@" . @parts[1]);
+        $ua->proxy(['http', 'ftp'],  $proxyurl);
+    };
+
+    return $ua;
+};
+
 sub upload_files {
-    
-  
+
   my $sid;
   use LWP::UserAgent;  
   use HTTP::Request::Common;
   
   #get session ID
   $request = HTTP::Request->new(GET => $upload_server."/uploadrequest.php?v=0.2");
-  $ua = LWP::UserAgent->new;
+  $ua = check_proxy;
   $response = $ua->request($request);
   $sid = $response->content;
   
