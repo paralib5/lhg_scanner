@@ -155,29 +155,54 @@ system ("thunderbird -compose \"to='webmaster\@linux-hardware-guide.com',subject
 exit 0;
 
 sub check_proxy {
-
-    use IO::Prompter;
-    use URI::Split qw(uri_split uri_join);
-
-    my $ua = LWP::UserAgent->new;
-
-    if ($ENV{http_proxy} eq "") {
-        print "No http proxy defined.";
-        return $ua;
-    }
-
-    $ua->env_proxy;
-    my $response = $ua->get($upload_server);
-    if ($response->code == 407) {
-        print "Proxy requires username and password\n";
-        my $username = prompt "Username: ";
-        my $password = prompt "Password: ", -echo=>'*';
-        my (@parts) = uri_split($ENV{http_proxy});
-        $proxyurl = uri_join(@parts[0], $username . ":" . $password . "@" . @parts[1]);
-        $ua->proxy(['http', 'ftp'],  $proxyurl);
+    
+    # check if we access library.linux-hardware-guide.com via a proxy
+    
+    # first test if we have the necessary Perl module installed
+    my $modtest = eval
+    {
+        require IO::Prompter;
+        IO::Prompter->import();
+        1;
     };
+    
+    if ( $modtest ) {
 
-    return $ua;
+        #eval "use IO::Prompter; 1" or die "Module not found";
+        use URI::Split qw(uri_split uri_join);
+
+        my $ua = LWP::UserAgent->new;
+
+        if ($ENV{http_proxy} eq "") {
+            print "No http proxy defined.\n";
+            return $ua;
+        }
+
+        $ua->env_proxy;
+        my $response = $ua->get($upload_server);
+        if ($response->code == 407) {
+        
+            if ($ARGV[0] eq "--silent") {
+                # user prompt will not work in --silent mode
+                # do not ask for proxy data, end program with error message
+                print "Error: Proxy Username and Password needed\n";
+                exit 1;
+            }
+
+        
+            print "Proxy requires username and password\n";
+            my $username = prompt( "Username: " );
+            my $password = prompt( "Password: ", -echo=>'*');
+            my (@parts) = uri_split($ENV{http_proxy});
+            $proxyurl = uri_join(@parts[0], $username . ":" . $password . "@" . @parts[1]);
+            $ua->proxy(['http', 'ftp'],  $proxyurl);
+        };
+        
+        return $ua;
+    };
+    
+    # cannot perform proxy check due to missing module
+    return LWP::UserAgent->new;
 };
 
 sub upload_files {
