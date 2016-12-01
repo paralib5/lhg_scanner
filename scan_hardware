@@ -12,12 +12,16 @@
 # https://github.com/paralib5/lhg_scanner
 
 
-$VERSION = "0.4.0";
+$VERSION = "0.5.0";
 
 $DEBUG = 0;
 
 # The Linux-Hardware-Guide library server
 $upload_server="http://library.linux-hardware-guide.com";
+
+# The Linux-Hardware-Guide configuration file
+$lhg_conf_filename="/etc/lhg-tools.conf";
+
   
 $TMPDIR = "/tmp/LHG.".$$;
 
@@ -153,6 +157,35 @@ $files = create_attachment_string();
 system ("thunderbird -compose \"to='webmaster\@linux-hardware-guide.com',subject='Linux Hardware - automatic scan',body='$mailtext',attachment='$files'\"");
 
 exit 0;
+
+sub read_configfile {
+
+    # read preferences from configuration key-value file
+    # only the keys defined in the hash %prefs are read,
+    # all other stuff is ignored
+
+    my $configfile = shift;
+    my $prefs = shift;
+
+    if (! -e $configfile) {
+        return 0;
+    };
+
+    open(my $fh, $configfile);
+    while (<$fh>) {
+        chomp;                  # no newline
+        s/#.*//;                # no comments
+        s/^\s+//;               # no leading white
+        s/\s+$//;               # no trailing white
+        next unless length;     # anything left?
+        my ($var, $value) = split(/\s*=\s*/, $_, 2);
+        if (exists $$prefs{$var}) {
+            $$prefs{$var} = $value;
+        }
+    }
+    close($fh);
+    return 1;
+}
 
 sub check_proxy {
     
@@ -309,7 +342,7 @@ sub check_root {
         #print "WARNING:\n";
         #print "========\n";
         print "(This script is running without root privileges. ";
-        print "Harddisk performance can only be measured with root priveleges and therefore will be skipped.)\n";
+        print "Harddisk performance can only be measured with root privileges and therefore will be skipped.)\n";
         #print "\n";
         print "\n";
     }
@@ -352,7 +385,7 @@ sub anonymize_data {
                     $line =~ s/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/192.168.0.0/g;
                 }
                 
-                #appamor output can contain sensitive information (e.g. home directory file names)
+                #apparmor output can contain sensitive information (e.g. home directory file names)
                 if ($line =~ m/apparmor=/) {
                     $line = "FILTERED LINE (apparmor)";
                 }
@@ -447,78 +480,63 @@ sub misc_stats {
 
 }
 
-sub check_configuration_file {
-    
-    $filename = '/etc/lhg-tools.conf';
-    
-    if (-e $filename) {
-        # file exists, read configuration
-        $uid = get_conf_value("ANONYMOUS_USER_ID");
-        $umail = get_conf_value("USER_EMAIL");
-        
-    }else {
-        #print "not existing: ( $< ) ";
-        #create if root
-        if ( $< == 0 ) {
-            
-            my @chars = (0 .. 9, "A".."Z", "a".."z");
-            my $rndstring;
-            $rndstring .= $chars[rand @chars] for 1..16;
+sub create_lhg_configfile {
 
-            $UID = $rndstring;
-            
-            my $file = "/etc/lhg-tools.conf";
-            open(FILE, '>'.$file); 
-            
-            print FILE "# This is the configuration file of the Linux-Hardware-Guide tools\n";
-            print FILE "# \n";
-            print FILE "
+    # create random uid
+    my @chars = (0 .. 9, 'A'..'Z', 'a'..'z');
+    my $rndstring;
+    $rndstring .= $chars[rand @chars] for 1..16;
+
+    # use example domain as of RFC 2606
+    my $dummymail = 'unknown@example.com';
+
+    open(my $fh, '>', $lhg_conf_filename) or return; 
+    print $fh <<"EOT";
+# This is the configuration file of the Linux-Hardware-Guide tools
+
 # Every user gets an anonymous user id assigned to allow checking 
 # his own upload results
 # ID is set by ANONYMOUS_USER_ID
-                
-ANONYMOUS_USER_ID = $UID
-                
+
+ANONYMOUS_USER_ID = $rndstring
+
 # Your account can be linked with your email address. This way we can 
 # contact you, if we have questions regarding your uploaded hardware
 # data.
-                
-USER_EMAIL = unknown\@null.com
-                
-";
 
-# close the file.
-close FILE;
-            
-            
-        }
-    }
-    
+USER_EMAIL = $dummymail
+
+EOT
+    close($fh);
+
+    print "Configuration file '$lhg_conf_filename' created.\n";
+    print "Please configure your email address if wanted or remove the file ";
+    print "if not used in the future.\n";
+
+    return ($rndstring, $dummymail);
 }
 
-sub get_conf_value {
-    
-    my $confstrg = shift;
-    my $confstrgl = length($confstrg);
-    my $confvalue;
-    
-    open FILE, "/etc/lhg-tools.conf";
-  
-    while (<FILE>) {
-        #print "S: $_ ";  
-      if ( substr($_,0,$confstrgl) eq $confstrg) {
-          #print $_;
-          $confvalue = $_;
-          $confvalue =~ s/$confstrg//;
-          $confvalue =~ s/=//;
-          $confvalue =~ s/ //g;
-          $confvalue =~ s/(\r)|(\n)//g;
-      }
+sub check_configuration_file {
+
+    # If file does not exist try to create a new one
+    if (! -e $lhg_conf_filename) {
+        if ( $< == 0 ) {
+            ($uid, $umail) = create_lhg_configfile();
+        }
+        return;
     }
-    close FILE;
+
+    # Read configuration from already existing file
+    my %prefs = (
+        'ANONYMOUS_USER_ID' => "",
+        'USER_EMAIL' => ""
+        );
+    read_configfile($lhg_conf_filename, \%prefs);
+
+    # Set global variables for later usage
+    $uid = $prefs{'ANONYMOUS_USER_ID'};
+    $umail = $prefs{'USER_EMAIL'};
     
-    #print "Val: $confvalue";
-    return $confvalue;
 }
 
 sub read_dmi {
