@@ -11,17 +11,34 @@
 # Latest version of the script can be found at:
 # https://github.com/paralib5/lhg_scanner
 
+use Getopt::Long qw(GetOptions);
+Getopt::Long::Configure qw(gnu_getopt);
 
-$VERSION = "0.4.0";
+$VERSION = "0.5.0";
 
-$DEBUG = 0;
+# Options from command line in upper case
+$DEBUG = 0;		# run in debug mode
+$SILENT = 0;		# run in batch mode, no user interaction
+$USERID = "";		# LHG userid
+$USERIDDE = "";		# LHG.de userid
+$COMMENTID = "";	# Link with comment
+
+$TMPDIR = "/tmp/LHG.".$$; # not yet 
+
+GetOptions (
+    "silent" =>  \$SILENT,
+    "debug" => \$DEBUG,
+    "c=s" => \$COMMENTID,
+    "d=s" => \$USERIDDE,
+    "u=s" => \$USERID
+);
 
 # The Linux-Hardware-Guide library server
 $upload_server="http://library.linux-hardware-guide.com";
-  
-$TMPDIR = "/tmp/LHG.".$$;
 
-interpret_commandline_options();
+# The Linux-Hardware-Guide configuration file
+$lhg_conf_filename="/etc/lhg-tools.conf";
+
 check_configuration_file();
 
 print "***********\n";
@@ -34,7 +51,11 @@ print "* \n";
 print "* Log outputs will be stored in: ";
 print "$TMPDIR \n";
 print "***********\n";
-print "\n";
+if ($DEBUG) { print "- Debug mode enabled\n"; };
+if ($SILENT) { print "- Silent mode (batch) enabled\n"; };
+if ($USERID) { print "- User id = $USERID\n"; };
+if ($USERIDDE) { print "- User id (de) = $USERIDDE\n"; };
+if ($COMMENTID) { print "- Comment id = $COMMENTID\n"; };
 print "\n";
 
 my @allfiles = ("alsa_cards.txt","alsa_devices.txt","aplay.txt","cpuinfo.txt",
@@ -117,20 +138,13 @@ anonymize_data();
 
 print "done\n";
 
-print "\nUploading data\n";
-
-#DEBUG MODE
-#exit 0;
-#
-
-if ($DEBUG == 0) {
+if (! $DEBUG) {
     # Upload request and open browser
+    print "\nUploading data\n";
     upload_files();
-    exit 0;
-} else {
-    exit 0;
-}    
+}
 
+exit 0;
 
 $mailtext ="Please fill out the following mail body:
 
@@ -154,55 +168,113 @@ system ("thunderbird -compose \"to='webmaster\@linux-hardware-guide.com',subject
 
 exit 0;
 
-sub check_proxy {
-    
-    # check if we access library.linux-hardware-guide.com via a proxy
-    
+sub read_configfile {
+
+    # read preferences from configuration key-value file
+    # only the keys defined in the hash %prefs are read,
+    # all other stuff is ignored
+
+    my $configfile = shift;
+    my $prefs = shift;
+
+    if (! -e $configfile) {
+        return 0;
+    };
+
+    open(my $fh, $configfile);
+    while (<$fh>) {
+        chomp;                  # no newline
+        s/#.*//;                # no comments
+        s/^\s+//;               # no leading white
+        s/\s+$//;               # no trailing white
+        next unless length;     # anything left?
+        my ($var, $value) = split(/\s*=\s*/, $_, 2);
+        if (exists $$prefs{$var}) {
+            $$prefs{$var} = $value;
+        }
+    }
+    close($fh);
+    return 1;
+}
+
+sub ask_for_proxy_credentials {
     # first test if we have the necessary Perl module installed
-    my $modtest = eval
-    {
+    my $modtest = eval {
         require IO::Prompter;
         IO::Prompter->import();
         1;
     };
+    if (! $modtest) {
+        print "Error: Module IO::Prompter not found!\n";
+        return ("", "");
+    }
+    # second ask the user for input
+    print "Proxy requires username and password\n";
+    my $username = prompt( "Username: " );
+    my $password = prompt( "Password: ", -echo=>'*');
+    return ($username, $password);
+}
+
+sub check_proxy {
     
-    if ( $modtest ) {
+    # check if we access library.linux-hardware-guide.com via a proxy
+    # returns LWP::UserAgent object
 
-        #eval "use IO::Prompter; 1" or die "Module not found";
-        use URI::Split qw(uri_split uri_join);
+    use URI::Split qw(uri_split uri_join);
 
-        my $ua = LWP::UserAgent->new;
+    my $ua = LWP::UserAgent->new;
 
-        if ($ENV{http_proxy} eq "") {
-            print "No http proxy defined.\n";
-            return $ua;
+    if ($ENV{http_proxy} eq "") {
+        print "No http proxy defined.\n";
+        return $ua;
+    }
+
+    $ua->env_proxy;
+    my $response = $ua->get($upload_server);
+    if ($response->code == 407) {
+
+        my (@parts) = uri_split($ENV{http_proxy});
+        my $proxyurl;
+        my %proxyprefs = (
+            'proxy_user' => "",
+            'proxy_password' => ""
+            );
+
+        # try to fetch credentials from ~/.wgetrc
+        my $configfile = $ENV{"HOME"}."/.wgetrc";
+	if (!read_configfile($configfile, \%proxyprefs)) {
+            print "Configuration file for proxy credentials not found: " . $configfile . "\n";
+	}
+        if ($proxyprefs{'proxy_user'} && $proxyprefs{'proxy_password'}) {
+            # found credentials
+            $proxyurl = uri_join(@parts[0], $proxyprefs{'proxy_user'} . ":" . $proxyprefs{'proxy_password'} . "@" . @parts[1]);
         }
-
-        $ua->env_proxy;
-        my $response = $ua->get($upload_server);
-        if ($response->code == 407) {
-        
-            if ($ARGV[0] eq "--silent") {
+        else {
+            if ($SILENT) {
                 # user prompt will not work in --silent mode
                 # do not ask for proxy data, end program with error message
-                print "Error: Proxy Username and Password needed\n";
+                print "Error: proxy username and password needed\n";
                 exit 1;
             }
+            else {
 
-        
-            print "Proxy requires username and password\n";
-            my $username = prompt( "Username: " );
-            my $password = prompt( "Password: ", -echo=>'*');
-            my (@parts) = uri_split($ENV{http_proxy});
-            $proxyurl = uri_join(@parts[0], $username . ":" . $password . "@" . @parts[1]);
-            $ua->proxy(['http', 'ftp'],  $proxyurl);
-        };
-        
-        return $ua;
-    };
-    
-    # cannot perform proxy check due to missing module
-    return LWP::UserAgent->new;
+                 # username and password are required, but cannot found
+                 # so the last chance ist to query the user about it
+                 my ($u, $p) = ask_for_proxy_credentials();
+                 if (! ($u || $p)) {
+                     print "Error: Could not get proxy credentials. Terminating.\n";
+                     exit 1;
+                 }
+                 $proxyurl = uri_join(@parts[0], $u . ":" . $p . "@" . @parts[1]);
+            }
+        }
+        $ua->proxy(['http', 'ftp'], $proxyurl);
+    }
+    elsif ($response->code != 200) {
+        print "Warning: Unexpected response code ". $response->code . "\n";
+    }
+
+    return $ua;
 };
 
 sub upload_files {
@@ -211,14 +283,19 @@ sub upload_files {
   use LWP::UserAgent;  
   use HTTP::Request::Common;
   
-  #get session ID
+  # get session ID
   $request = HTTP::Request->new(GET => $upload_server."/uploadrequest.php?v=0.2");
   $ua = check_proxy;
   $response = $ua->request($request);
-  $sid = $response->content;
-  
-  #$ua = LWP::UserAgent->new;
-  #upload files
+  if ($response->code == 200) {
+      # HTTP_OK
+      $sid = $response->content;
+  } else {
+      print "Error: obtaining session id for upload failed!";
+      return 0;
+  }
+
+  # upload files   
   $response = $ua->request(POST $upload_server."/uploadfiles.php", 
 
                Content_Type => 'form-data',
@@ -247,15 +324,15 @@ sub upload_files {
   print " -> "; 
   print "(".$response->code.") :";
   print $response->content;
-  
+
   if ($response->code == HTTP::Status::HTTP_REQUEST_TIMEOUT) {
       print "Connection timeout. Upload failed \n";
       exit 3;
-    }
-  if ($response->code == 500 ) {
+  }
+  elsif ($response->code == 500 ) {
       print "Bad Hostname, upload failed. Please check your internet connection. \n";
       exit 4;
-    }
+  }
   
   print "\n\nOpening scan results at:\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
   
@@ -269,13 +346,13 @@ sub upload_files {
   print FILE_OUT "http://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
   close FILE_OUT;
   
-  if ($ARGV[0] eq "--silent") {
+  if ($SILENT) {
       #service mode -> do nothing
   }else{
       open_browser($sid);
   }
   
-  
+
   print "\n\n\n****************************** ";
   print "\nYour scan results can be found at";
   print "\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."";
@@ -309,7 +386,7 @@ sub check_root {
         #print "WARNING:\n";
         #print "========\n";
         print "(This script is running without root privileges. ";
-        print "Harddisk performance can only be measured with root priveleges and therefore will be skipped.)\n";
+        print "Harddisk performance can only be measured with root privileges and therefore will be skipped.)\n";
         #print "\n";
         print "\n";
     }
@@ -352,7 +429,7 @@ sub anonymize_data {
                     $line =~ s/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/192.168.0.0/g;
                 }
                 
-                #appamor output can contain sensitive information (e.g. home directory file names)
+                #apparmor output can contain sensitive information (e.g. home directory file names)
                 if ($line =~ m/apparmor=/) {
                     $line = "FILTERED LINE (apparmor)";
                 }
@@ -447,78 +524,63 @@ sub misc_stats {
 
 }
 
-sub check_configuration_file {
-    
-    $filename = '/etc/lhg-tools.conf';
-    
-    if (-e $filename) {
-        # file exists, read configuration
-        $uid = get_conf_value("ANONYMOUS_USER_ID");
-        $umail = get_conf_value("USER_EMAIL");
-        
-    }else {
-        #print "not existing: ( $< ) ";
-        #create if root
-        if ( $< == 0 ) {
-            
-            my @chars = (0 .. 9, "A".."Z", "a".."z");
-            my $rndstring;
-            $rndstring .= $chars[rand @chars] for 1..16;
+sub create_lhg_configfile {
 
-            $UID = $rndstring;
-            
-            my $file = "/etc/lhg-tools.conf";
-            open(FILE, '>'.$file); 
-            
-            print FILE "# This is the configuration file of the Linux-Hardware-Guide tools\n";
-            print FILE "# \n";
-            print FILE "
+    # create random uid
+    my @chars = (0 .. 9, 'A'..'Z', 'a'..'z');
+    my $rndstring;
+    $rndstring .= $chars[rand @chars] for 1..16;
+
+    # use example domain as of RFC 2606
+    my $dummymail = 'unknown@example.com';
+
+    open(my $fh, '>', $lhg_conf_filename) or return; 
+    print $fh <<"EOT";
+# This is the configuration file of the Linux-Hardware-Guide tools
+
 # Every user gets an anonymous user id assigned to allow checking 
 # his own upload results
 # ID is set by ANONYMOUS_USER_ID
-                
-ANONYMOUS_USER_ID = $UID
-                
+
+ANONYMOUS_USER_ID = $rndstring
+
 # Your account can be linked with your email address. This way we can 
 # contact you, if we have questions regarding your uploaded hardware
 # data.
-                
-USER_EMAIL = unknown\@null.com
-                
-";
 
-# close the file.
-close FILE;
-            
-            
-        }
-    }
-    
+USER_EMAIL = $dummymail
+
+EOT
+    close($fh);
+
+    print "Configuration file '$lhg_conf_filename' created.\n";
+    print "Please configure your email address if wanted or remove the file ";
+    print "if not used in the future.\n";
+
+    return ($rndstring, $dummymail);
 }
 
-sub get_conf_value {
-    
-    my $confstrg = shift;
-    my $confstrgl = length($confstrg);
-    my $confvalue;
-    
-    open FILE, "/etc/lhg-tools.conf";
-  
-    while (<FILE>) {
-        #print "S: $_ ";  
-      if ( substr($_,0,$confstrgl) eq $confstrg) {
-          #print $_;
-          $confvalue = $_;
-          $confvalue =~ s/$confstrg//;
-          $confvalue =~ s/=//;
-          $confvalue =~ s/ //g;
-          $confvalue =~ s/(\r)|(\n)//g;
-      }
+sub check_configuration_file {
+
+    # If file does not exist try to create a new one
+    if (! -e $lhg_conf_filename) {
+        if ( $< == 0 ) {
+            ($uid, $umail) = create_lhg_configfile();
+        }
+        return;
     }
-    close FILE;
+
+    # Read configuration from already existing file
+    my %prefs = (
+        'ANONYMOUS_USER_ID' => "",
+        'USER_EMAIL' => ""
+        );
+    read_configfile($lhg_conf_filename, \%prefs);
+
+    # Set global variables for later usage
+    $uid = $prefs{'ANONYMOUS_USER_ID'};
+    $umail = $prefs{'USER_EMAIL'};
     
-    #print "Val: $confvalue";
-    return $confvalue;
 }
 
 sub read_dmi {
@@ -528,29 +590,4 @@ sub read_dmi {
     if ( $< == 0 ) { 
         system ("dmidecode >> $TMPDIR/dmesg.txt");
     }
-}
-
-sub interpret_commandline_options {
-    
-    $numArgs = $#ARGV + 1;
- 
-    foreach $argnum (0 .. $#ARGV) {
-        
-        # LHG userid was provided
-        if (substr($ARGV[$argnum],0,2) eq "-u" ) {
-            $USERID = substr($ARGV[$argnum],2);
-        }
-        
-        # LHG.de userid was provided
-        if (substr($ARGV[$argnum],0,2) eq "-d" ) {
-            $USERIDDE = substr($ARGV[$argnum],2);
-        }
-
-        # Link with comment
-        if (substr($ARGV[$argnum],0,2) eq "-c" ) {
-            $COMMENTID = substr($ARGV[$argnum],2);
-        }
-
-    }
-
 }
