@@ -197,55 +197,84 @@ sub read_configfile {
     return 1;
 }
 
-sub check_proxy {
-    
-    # check if we access library.linux-hardware-guide.com via a proxy
-
+sub ask_for_proxy_credentials {
     # first test if we have the necessary Perl module installed
-    my $modtest = eval
-    {
+    my $modtest = eval {
         require IO::Prompter;
         IO::Prompter->import();
         1;
     };
+    if (! $modtest) {
+        print "Error: Module IO::Prompter not found!\n";
+        return ("", "");
+    }
+    # second ask the user for input
+    print "Proxy requires username and password\n";
+    my $username = prompt( "Username: " );
+    my $password = prompt( "Password: ", -echo=>'*');
+    return ($username, $password);
+}
+
+sub check_proxy {
     
-    if ( $modtest ) {
+    # check if we access library.linux-hardware-guide.com via a proxy
+    # returns LWP::UserAgent object
 
-        #eval "use IO::Prompter; 1" or die "Module not found";
-        use URI::Split qw(uri_split uri_join);
+    use URI::Split qw(uri_split uri_join);
 
-        my $ua = LWP::UserAgent->new;
+    my $ua = LWP::UserAgent->new;
 
-        if ($ENV{http_proxy} eq "") {
-            print "No http proxy defined.\n";
-            return $ua;
+    if ($ENV{http_proxy} eq "") {
+        print "No http proxy defined.\n";
+        return $ua;
+    }
+
+    $ua->env_proxy;
+    my $response = $ua->get($upload_server);
+    if ($response->code == 407) {
+
+        my (@parts) = uri_split($ENV{http_proxy});
+        my $proxyurl;
+        my %proxyprefs = (
+            'proxy_user' => "",
+            'proxy_password' => ""
+            );
+
+        # try to fetch credentials from ~/.wgetrc
+        my $configfile = $ENV{"HOME"}."/.wgetrc";
+	if (!read_configfile($configfile, \%proxyprefs)) {
+            print "Configuration file for proxy credentials not found: " . $configfile . "\n";
+	}
+        if ($proxyprefs{'proxy_user'} && $proxyprefs{'proxy_password'}) {
+            # found credentials
+            $proxyurl = uri_join(@parts[0], $proxyprefs{'proxy_user'} . ":" . $proxyprefs{'proxy_password'} . "@" . @parts[1]);
         }
-
-        $ua->env_proxy;
-        my $response = $ua->get($upload_server);
-        if ($response->code == 407) {
-        
-            if ($ARGV[0] eq "--silent") {
+        else {
+            if ($SILENT) {
                 # user prompt will not work in --silent mode
                 # do not ask for proxy data, end program with error message
-                print "Error: Proxy Username and Password needed\n";
+                print "Error: proxy username and password needed\n";
                 exit 1;
             }
+            else {
 
-        
-            print "Proxy requires username and password\n";
-            my $username = prompt( "Username: " );
-            my $password = prompt( "Password: ", -echo=>'*');
-            my (@parts) = uri_split($ENV{http_proxy});
-            $proxyurl = uri_join(@parts[0], $username . ":" . $password . "@" . @parts[1]);
-            $ua->proxy(['http', 'ftp'],  $proxyurl);
-        };
-        
-        return $ua;
-    };
-    
-    # cannot perform proxy check due to missing module
-    return LWP::UserAgent->new;
+                 # username and password are required, but cannot found
+                 # so the last chance ist to query the user about it
+                 my ($u, $p) = ask_for_proxy_credentials();
+                 if (! ($u || $p)) {
+                     print "Error: Could not get proxy credentials. Terminating.\n";
+                     exit 1;
+                 }
+                 $proxyurl = uri_join(@parts[0], $u . ":" . $p . "@" . @parts[1]);
+            }
+        }
+        $ua->proxy(['http', 'ftp'], $proxyurl);
+    }
+    elsif ($response->code != 200) {
+        print "Warning: Unexpected response code ". $response->code . "\n";
+    }
+
+    return $ua;
 };
 
 sub upload_files {
@@ -254,14 +283,19 @@ sub upload_files {
   use LWP::UserAgent;  
   use HTTP::Request::Common;
   
-  #get session ID
+  # get session ID
   $request = HTTP::Request->new(GET => $upload_server."/uploadrequest.php?v=0.2");
   $ua = check_proxy;
   $response = $ua->request($request);
-  $sid = $response->content;
-  
-  #$ua = LWP::UserAgent->new;
-  #upload files
+  if ($response->code == 200) {
+      # HTTP_OK
+      $sid = $response->content;
+  } else {
+      print "Error: obtaining session id for upload failed!";
+      return 0;
+  }
+
+  # upload files   
   $response = $ua->request(POST $upload_server."/uploadfiles.php", 
 
                Content_Type => 'form-data',
@@ -290,15 +324,15 @@ sub upload_files {
   print " -> "; 
   print "(".$response->code.") :";
   print $response->content;
-  
+
   if ($response->code == HTTP::Status::HTTP_REQUEST_TIMEOUT) {
       print "Connection timeout. Upload failed \n";
       exit 3;
-    }
-  if ($response->code == 500 ) {
+  }
+  elsif ($response->code == 500 ) {
       print "Bad Hostname, upload failed. Please check your internet connection. \n";
       exit 4;
-    }
+  }
   
   print "\n\nOpening scan results at:\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
   
@@ -312,7 +346,7 @@ sub upload_files {
   print FILE_OUT "http://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."\n";
   close FILE_OUT;
   
-  if ($ARGV[0] eq "--silent") {
+  if ($SILENT) {
       #service mode -> do nothing
   }else{
       open_browser($sid);
