@@ -329,7 +329,7 @@ sub anonymize_data {
 sub check_unifying_receivers {
     #ToDo: This information should be stored in a separate file
     
-    $path_solaar = `which solaar-cli`;
+    my $path_solaar = `which solaar-cli`;
     if ($path_solaar eq "") {
         # tool not installed
     } else {
@@ -344,8 +344,8 @@ sub check_unifying_receivers {
 sub check_graphics {
     #ToDo: This information should be stored in a separate file
     
-    $path_xinput = `which xinput`;
-    if ($path_solaar eq "") {
+    my $path_xinput = `which xinput`;
+    if ($path_xinput eq "") {
         # tool not installed
     } else {
         system( 'echo "\n ------ xinput ------- \n" >> '.$TMPDIR.'/dmesg.txt');
