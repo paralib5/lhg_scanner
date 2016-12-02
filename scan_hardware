@@ -11,10 +11,27 @@
 # Latest version of the script can be found at:
 # https://github.com/paralib5/lhg_scanner
 
+use Getopt::Long qw(GetOptions);
+Getopt::Long::Configure qw(gnu_getopt);
 
 $VERSION = "0.5.0";
 
-$DEBUG = 0;
+# Options from command line in upper case
+$DEBUG = 0;		# run in debug mode
+$SILENT = 0;		# run in batch mode, no user interaction
+$USERID = "";		# LHG userid
+$USERIDDE = "";		# LHG.de userid
+$COMMENTID = "";	# Link with comment
+
+$TMPDIR = "/tmp/LHG.".$$; # not yet 
+
+GetOptions (
+    "silent" =>  \$SILENT,
+    "debug" => \$DEBUG,
+    "c=s" => \$COMMENTID,
+    "d=s" => \$USERIDDE,
+    "u=s" => \$USERID
+);
 
 # The Linux-Hardware-Guide library server
 $upload_server="http://library.linux-hardware-guide.com";
@@ -22,10 +39,6 @@ $upload_server="http://library.linux-hardware-guide.com";
 # The Linux-Hardware-Guide configuration file
 $lhg_conf_filename="/etc/lhg-tools.conf";
 
-  
-$TMPDIR = "/tmp/LHG.".$$;
-
-interpret_commandline_options();
 check_configuration_file();
 
 print "***********\n";
@@ -38,7 +51,11 @@ print "* \n";
 print "* Log outputs will be stored in: ";
 print "$TMPDIR \n";
 print "***********\n";
-print "\n";
+if ($DEBUG) { print "- Debug mode enabled\n"; };
+if ($SILENT) { print "- Silent mode (batch) enabled\n"; };
+if ($USERID) { print "- User id = $USERID\n"; };
+if ($USERIDDE) { print "- User id (de) = $USERIDDE\n"; };
+if ($COMMENTID) { print "- Comment id = $COMMENTID\n"; };
 print "\n";
 
 my @allfiles = ("alsa_cards.txt","alsa_devices.txt","aplay.txt","cpuinfo.txt",
@@ -121,20 +138,13 @@ anonymize_data();
 
 print "done\n";
 
-print "\nUploading data\n";
-
-#DEBUG MODE
-#exit 0;
-#
-
-if ($DEBUG == 0) {
+if (! $DEBUG) {
     # Upload request and open browser
+    print "\nUploading data\n";
     upload_files();
-    exit 0;
-} else {
-    exit 0;
-}    
+}
 
+exit 0;
 
 $mailtext ="Please fill out the following mail body:
 
@@ -190,7 +200,7 @@ sub read_configfile {
 sub check_proxy {
     
     # check if we access library.linux-hardware-guide.com via a proxy
-    
+
     # first test if we have the necessary Perl module installed
     my $modtest = eval
     {
@@ -308,7 +318,7 @@ sub upload_files {
       open_browser($sid);
   }
   
-  
+
   print "\n\n\n****************************** ";
   print "\nYour scan results can be found at";
   print "\nhttp://www.linux-hardware-guide.com/hardware-profile/scan-".$sid."";
@@ -546,29 +556,4 @@ sub read_dmi {
     if ( $< == 0 ) { 
         system ("dmidecode >> $TMPDIR/dmesg.txt");
     }
-}
-
-sub interpret_commandline_options {
-    
-    $numArgs = $#ARGV + 1;
- 
-    foreach $argnum (0 .. $#ARGV) {
-        
-        # LHG userid was provided
-        if (substr($ARGV[$argnum],0,2) eq "-u" ) {
-            $USERID = substr($ARGV[$argnum],2);
-        }
-        
-        # LHG.de userid was provided
-        if (substr($ARGV[$argnum],0,2) eq "-d" ) {
-            $USERIDDE = substr($ARGV[$argnum],2);
-        }
-
-        # Link with comment
-        if (substr($ARGV[$argnum],0,2) eq "-c" ) {
-            $COMMENTID = substr($ARGV[$argnum],2);
-        }
-
-    }
-
 }
