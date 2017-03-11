@@ -21,15 +21,21 @@ sub check_config_file {
         exit 2;
     }
     
-    # load web page
-    if (-e "/usr/bin/sensible-browser") {
-        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
-    }elsif (-e "/usr/bin/xdg-open") {
-        system "xdg-open http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
-    }elsif (-e "/usr/bin/firefox") {
-             system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
-    }elsif (-e "/usr/bin/chromium-browser") {
-             system "chromium-browser --app=http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    # load web page 
+    # I think which is better if sombody use browsers on different paths
+    if (`which sensible-browser 2>/dev/null`) {
+        system "`which sensible-browser` http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    # added blackPanther OS specified item
+    }elsif (`which default-browser 2>/dev/null`) {
+        system "`which default-browser` http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    }elsif (`which xdg-open 2>/dev/null`) {
+        system "`which xdg-open` http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    }elsif (`which firefox 2>/dev/null`) {
+             system "`which firefox` --new-tab http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    }elsif (`which default-browser 2>/dev/null`) {
+             system "`which chromium-browser` --app=http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+    } else {
+    print "\nExiting...Missing a known browser! Please install one..\n\n";
     }
 }
 

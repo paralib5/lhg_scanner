@@ -23,7 +23,9 @@ $USERID = "";		# LHG userid
 $USERIDDE = "";		# LHG.de userid
 $COMMENTID = "";	# Link with comment
 
-$TMPDIR = "/tmp/LHG.".$$; # not yet 
+# fixed by Charles K Barcza <blackPantherOS> because /tmp destination not good if we use tmpfs 
+# better the $ENV{HOME}/tmp or /var/tmp if exists
+$TMPDIR = "$ENV{HOME}/tmp/LHG.".$$; # not yet 
 
 GetOptions (
     "silent" =>  \$SILENT,
