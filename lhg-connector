@@ -32,7 +32,7 @@ sub check_config_file {
         system "`which xdg-open` http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     }elsif (`which firefox 2>/dev/null`) {
              system "`which firefox` --new-tab http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
-    }elsif (`which default-browser 2>/dev/null`) {
+    }elsif (`which chromium-browser 2>/dev/null`) {
              system "`which chromium-browser` --app=http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     } else {
     print "\nExiting...Missing a known browser! Please install one..\n\n";
