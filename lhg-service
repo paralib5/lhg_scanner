@@ -53,12 +53,15 @@ exit 0;
 #
 
 sub create_fingerprint_pci {
-    
+    # modified by Charles K Barcza <blackPanther OS> because the 
+    #/var/tmp or $ENV{HOME}/tmp better if system use tmpfs! 
+
     system ("mkdir -p $TMPDIR/.LHG_".$sid);
     system ("lspci -nnk > $TMPDIR/.LHG_".$sid."/lspci.txt");
     
     open(FILE, "<", "$TMPDIR/.LHG_".$sid."/lspci.txt");
     open(FILEN, "<", "$TMPDIR/.LHG_".$sid."/lspci.txt");
+
     $nextline=<FILEN>;
     $i=0;
     #print "PCI Fingerprint: \n";
@@ -117,6 +120,7 @@ sub create_fingerprint_usb {
     system ("lsusb  > $TMPDIR/.LHG_".$sid."/lsusb.txt");
 
     open(FILE, "<", "$TMPDIR/.LHG_".$sid."/lsusb.txt");
+
     $i=0;
     
     #print "USB Fingerprint: \n";
@@ -318,8 +322,7 @@ sub upload_data {
         $rndstring .= $chars[rand @chars] for 1..8;
         system ("mkdir -p /var/spool/lhg-tools/missed_uploads.$rndstring");
         system ("cp $TMPDIR/.LHG_$pid/* /var/spool/lhg-tools/missed_uploads.$rndstring/");
-        #system ("echo $
-        
+              
     } else {
         # ToDo: upload done, also upload missed files
     }
