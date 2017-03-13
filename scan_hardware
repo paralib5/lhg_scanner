@@ -14,7 +14,7 @@
 use Getopt::Long qw(GetOptions);
 Getopt::Long::Configure qw(gnu_getopt);
 
-$VERSION = "0.5.0";
+$VERSION = "0.5.1";
 
 # Options from command line in upper case
 $DEBUG = 0;		# run in debug mode
@@ -23,9 +23,7 @@ $USERID = "";		# LHG userid
 $USERIDDE = "";		# LHG.de userid
 $COMMENTID = "";	# Link with comment
 
-# fixed by Charles K Barcza <blackPantherOS> because /tmp destination not good if we use tmpfs 
-# better the $ENV{HOME}/tmp or /var/tmp if exists
-$TMPDIR = "$ENV{HOME}/tmp/LHG.".$$; # not yet 
+$TMPDIR = "$ENV{HOME}/.tmp/LHG.".$$;
 
 GetOptions (
     "silent" =>  \$SILENT,
@@ -71,7 +69,7 @@ check_root();
 
 print "Collecting data:\n";
 
-system ("mkdir $TMPDIR");
+system ("mkdir -p $TMPDIR");
 
 # System information
 print " -> general system information \n";

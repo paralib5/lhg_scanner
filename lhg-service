@@ -1,13 +1,13 @@
 #!/usr/bin/perl
 
 # regular check of hardware, if new hardware is found data is uploaded 
-# Linux-Hardware-Guide database
+# to Linux-Hardware-Guide database
 
-# Currently only checking PCI and USB devices
+# Currently only checking for new PCI and USB devices
 
 $sid = $ARGV[0];
 $upload_server="http://library.linux-hardware-guide.com";
-
+$TMPDIR = "$ENV{HOME}/.tmp";
 
 # Check for cached uploads - if found upload now
 check_missed_uploads();
@@ -55,11 +55,13 @@ exit 0;
 sub create_fingerprint_pci {
     # modified by Charles K Barcza <blackPanther OS> because the 
     #/var/tmp or $ENV{HOME}/tmp better if system use tmpfs! 
-    system ("mkdir -p $ENV{HOME}/tmp/.LHG_".$sid);
-    system ("lspci -nnk > $ENV{HOME}/tmp/.LHG_".$sid."/lspci.txt");
+
+    system ("mkdir -p $TMPDIR/.LHG_".$sid);
+    system ("lspci -nnk > $TMPDIR/.LHG_".$sid."/lspci.txt");
     
-    open(FILE, "<", "$ENV{HOME}/tmp/.LHG_".$sid."/lspci.txt");
-    open(FILEN, "<", "$ENV{HOME}/tmp/.LHG_".$sid."/lspci.txt");
+    open(FILE, "<", "$TMPDIR/.LHG_".$sid."/lspci.txt");
+    open(FILEN, "<", "$TMPDIR/.LHG_".$sid."/lspci.txt");
+
     $nextline=<FILEN>;
     $i=0;
     #print "PCI Fingerprint: \n";
@@ -115,9 +117,10 @@ sub grab_subsystemid {
 
 sub create_fingerprint_usb {
     
-    system ("lsusb  > $ENV{HOME}/tmp/.LHG_".$sid."/lsusb.txt");
+    system ("lsusb  > $TMPDIR/.LHG_".$sid."/lsusb.txt");
 
-    open(FILE, "<", "$ENV{HOME}/tmp/.LHG_".$sid."/lsusb.txt");
+    open(FILE, "<", "$TMPDIR/.LHG_".$sid."/lsusb.txt");
+
     $i=0;
     
     #print "USB Fingerprint: \n";
@@ -318,9 +321,8 @@ sub upload_data {
         my $rndstring;
         $rndstring .= $chars[rand @chars] for 1..8;
         system ("mkdir -p /var/spool/lhg-tools/missed_uploads.$rndstring");
-        system ("cp $ENV{HOME}/tmp/LHG.$pid/* /var/spool/lhg-tools/missed_uploads.$rndstring/");
-        #system ("echo $
-        
+        system ("cp $TMPDIR/.LHG_$pid/* /var/spool/lhg-tools/missed_uploads.$rndstring/");
+              
     } else {
         # ToDo: upload done, also upload missed files
     }

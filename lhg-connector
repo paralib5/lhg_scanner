@@ -16,13 +16,13 @@ sub check_config_file {
     }else {
         
         print "No HW Scan executed so far. \n";
-        print "This normally should happen during installation. \n";
+        print "This normally should happen only during installation. \n";
         print "Please execute: sudo /usr/bin/lhg-service \n";
         exit 2;
     }
     
-    # load web page 
-    # I think which is better if sombody use browsers on different paths
+
+    # load web page with scan results
     if (`which sensible-browser 2>/dev/null`) {
         system "`which sensible-browser` http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     # added blackPanther OS specified item
@@ -31,11 +31,11 @@ sub check_config_file {
     }elsif (`which xdg-open 2>/dev/null`) {
         system "`which xdg-open` http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     }elsif (`which firefox 2>/dev/null`) {
-             system "`which firefox` --new-tab http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+        system "`which firefox` --new-tab http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     }elsif (`which chromium-browser 2>/dev/null`) {
-             system "`which chromium-browser` --app=http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
+        system "`which chromium-browser` --app=http://www.linux-hardware-guide.com/hardware-profile/uid-$uid";
     } else {
-    print "\nExiting...Missing a known browser! Please install one..\n\n";
+        print "\nExiting...Missing a known browser! Please install one..\n\n";
     }
 }
 
