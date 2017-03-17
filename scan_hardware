@@ -23,7 +23,8 @@ $USERID = "";		# LHG userid
 $USERIDDE = "";		# LHG.de userid
 $COMMENTID = "";	# Link with comment
 
-$TMPDIR = "$ENV{HOME}/.tmp/LHG.".$$;
+# I think this is the better place ;-)
+$TMPDIR = "$ENV{HOME}/.cache/LHG.".$$;
 
 GetOptions (
     "silent" =>  \$SILENT,
