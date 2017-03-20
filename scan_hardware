@@ -115,7 +115,7 @@ system ("aplay -l > $TMPDIR/aplay.txt");
 # HDD measurement
 print " -> checking harddisk\n";
 check_drives();
-system("dd if=/dev/zero of=/tmp/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
+system("dd if=/dev/zero of=$HOME/.cache/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
 #only possible as root
 if ( $< == 0 ) { 
     system ("hdparm -tT /dev/sda > $TMPDIR/hdparm.txt");
@@ -125,6 +125,8 @@ if ( $< == 0 ) {
     system ("touch $TMPDIR/hdparm.txt");
     system ("touch $TMPDIR/hdparm_direct.txt");
 }
+
+system("rm -f $HOME/.cache/dd_tempfile");
 
 # Equipment paired with Logitech Unifying Receivers is hard to distinguish
 # We will need some help by other tools here
