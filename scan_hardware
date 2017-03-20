@@ -23,7 +23,7 @@ $USERID = "";		# LHG userid
 $USERIDDE = "";		# LHG.de userid
 $COMMENTID = "";	# Link with comment
 
-$TMPDIR = "$ENV{HOME}/.tmp/LHG.".$$;
+$TMPDIR = "$ENV{HOME}/.cache/LHG.".$$;
 
 GetOptions (
     "silent" =>  \$SILENT,
@@ -119,11 +119,15 @@ check_drives();
 #The HDD write test uses a significant amount of space for its temporary file
 #We skip this test if there is not enough space left on the drive
 $available_space = `df $TMPDIR | awk 'NR==2 {print \$4}'`;
-if ($available_space > 1073741824/1024*1.5){ # 1.5 ... safety margin
-    system("dd if=/dev/zero of=$TMPDIR/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
-    system("rm $TMPDIR/dd_tempfile");
-}else{
-    print "Skipping HDD write test due to limited storage capacity\n";
+if (`cat /proc/cmdline | grep -e LABEL -e install`) {
+    print " - Do not run disk test on Live system..\n" ;
+} else {
+    if ($available_space > 1073741824/1024*1.5){ # 1.5 ... safety margin
+        system("dd if=/dev/zero of=$TMPDIR/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
+        system("rm -f $TMPDIR/dd_tempfile");
+    }else{
+        print "Skipping HDD write test due to limited storage capacity\n";
+    }
 }
 
 #only possible as root
