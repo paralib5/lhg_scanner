@@ -116,7 +116,7 @@ system ("aplay -l > $TMPDIR/aplay.txt");
 print " -> checking harddisk\n";
 check_drives();
 if (`cat /proc/cmdline | grep -e LABEL -e install`) {
-    print " - Dot run Disk test on Live system..\n" ;
+    print " - Do not run disk test on Live system..\n" ;
 } else {
     system("dd if=/dev/zero of=$HOME/.cache/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
 } 
