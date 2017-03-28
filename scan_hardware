@@ -23,7 +23,6 @@ $USERID = "";		# LHG userid
 $USERIDDE = "";		# LHG.de userid
 $COMMENTID = "";	# Link with comment
 
-# I think this is the better place ;-)
 $TMPDIR = "$ENV{HOME}/.cache/LHG.".$$;
 
 GetOptions (
@@ -115,11 +114,21 @@ system ("aplay -l > $TMPDIR/aplay.txt");
 # HDD measurement
 print " -> checking harddisk\n";
 check_drives();
+
+
+#The HDD write test uses a significant amount of space for its temporary file
+#We skip this test if there is not enough space left on the drive
+$available_space = `df $TMPDIR | awk 'NR==2 {print \$4}'`;
 if (`cat /proc/cmdline | grep -e LABEL -e install`) {
     print " - Do not run disk test on Live system..\n" ;
 } else {
-    system("dd if=/dev/zero of=$HOME/.cache/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
-} 
+    if ($available_space > 1073741824/1024*1.5){ # 1.5 ... safety margin
+        system("dd if=/dev/zero of=$TMPDIR/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
+        system("rm -f $TMPDIR/dd_tempfile");
+    }else{
+        print "Skipping HDD write test due to limited storage capacity\n";
+    }
+}
 
 #only possible as root
 if ( $< == 0 ) { 
@@ -130,8 +139,6 @@ if ( $< == 0 ) {
     system ("touch $TMPDIR/hdparm.txt");
     system ("touch $TMPDIR/hdparm_direct.txt");
 }
-
-system("rm -f $HOME/.cache/dd_tempfile");
 
 # Equipment paired with Logitech Unifying Receivers is hard to distinguish
 # We will need some help by other tools here
