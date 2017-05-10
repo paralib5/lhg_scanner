@@ -71,6 +71,9 @@ print "Collecting data:\n";
 
 system ("mkdir -p $TMPDIR");
 
+system ("touch $TMPDIR/dd.txt");
+system ("touch $TMPDIR/dd.err.txt");
+
 # System information
 print " -> general system information \n";
 system ("lsb_release -a > $TMPDIR/lsb_release.txt");
