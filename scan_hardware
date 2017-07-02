@@ -124,6 +124,9 @@ check_drives();
 $available_space = `df $TMPDIR | awk 'NR==2 {print \$4}'`;
 if (`cat /proc/cmdline | grep -e LABEL -e install`) {
     print " - Do not run disk test on Live system..\n" ;
+    # upload fix
+    system ("touch $TMPDIR/dd.err.txt");
+    system ("touch $TMPDIR/dd.txt");
 } else {
     if ($available_space > 1073741824/1024*1.5){ # 1.5 ... safety margin
         system("dd if=/dev/zero of=$TMPDIR/dd_tempfile bs=1M count=1024 conv=fdatasync,notrunc >  $TMPDIR/dd.txt 2> $TMPDIR/dd.err.txt");
@@ -141,6 +144,8 @@ if ( $< == 0 ) {
     #create empty dummy file
     system ("touch $TMPDIR/hdparm.txt");
     system ("touch $TMPDIR/hdparm_direct.txt");
+    system ("touch $TMPDIR/dd.err.txt");
+    system ("touch $TMPDIR/dd.txt");
 }
 
 # Equipment paired with Logitech Unifying Receivers is hard to distinguish
@@ -388,7 +393,7 @@ sub open_browser {
     if (-e "/usr/bin/sensible-browser") {
         system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt ";
     }elsif (-e "/usr/bin/xdg-open") {
-        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
+        system "xdg-open http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
     }elsif (-e "/usr/bin/firefox") {
         system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
     }elsif (-e "/usr/bin/chromium-browser") {
@@ -474,7 +479,7 @@ sub anonymize_data {
 sub check_unifying_receivers {
     #ToDo: This information should be stored in a separate file
     
-    my $path_solaar = `which solaar-cli`;
+    my $path_solaar = `which solaar-cli 2>/dev/null`;
     if ($path_solaar eq "") {
         # tool not installed
     } else {
@@ -489,7 +494,7 @@ sub check_unifying_receivers {
 sub check_graphics {
     #ToDo: This information should be stored in a separate file
     
-    my $path_xinput = `which xinput`;
+    my $path_xinput = `which xinput 2>/dev/null`;
     if ($path_xinput eq "") {
         # tool not installed
     } else {
