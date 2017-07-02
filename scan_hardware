@@ -19,7 +19,7 @@ $VERSION = "0.5.1";
 # Options from command line in upper case
 $DEBUG = 0;		# run in debug mode
 $SILENT = 0;		# run in batch mode, no user interaction
-$USERID = "39984";		# LHG userid
+$USERID = "";		# LHG userid
 $USERIDDE = "";		# LHG.de userid
 $COMMENTID = "";	# Link with comment
 
@@ -393,7 +393,7 @@ sub open_browser {
     if (-e "/usr/bin/sensible-browser") {
         system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt ";
     }elsif (-e "/usr/bin/xdg-open") {
-        system "sensible-browser http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
+        system "xdg-open http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
     }elsif (-e "/usr/bin/firefox") {
         system "firefox --new-tab http://www.linux-hardware-guide.com/hardware-profile/scan-$sid 2>> $TMPDIR/errors.txt";
     }elsif (-e "/usr/bin/chromium-browser") {
