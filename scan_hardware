@@ -19,7 +19,7 @@ $VERSION = "0.5.1";
 # Options from command line in upper case
 $DEBUG = 0;		# run in debug mode
 $SILENT = 0;		# run in batch mode, no user interaction
-$USERID = "39984";		# LHG userid
+$USERID = "";		# LHG userid
 $USERIDDE = "";		# LHG.de userid
 $COMMENTID = "";	# Link with comment
 
